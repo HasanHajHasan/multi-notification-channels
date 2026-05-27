@@ -1,5 +1,5 @@
 {
-  "name": "multi-channel-notification",
+  "name": "multi-notification-channels",
   "version": "1.0.0",
   "description": "GitHub Action — send notifications to 10 platforms via Apprise (Node.js runtime)",
   "main": "src/index.js",

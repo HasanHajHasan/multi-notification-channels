@@ -13,18 +13,17 @@ const path          = require('path');
 
 // ── Read inputs ───────────────────────────────────────────────────────────────
 
-const ACTION_PATH    = process.env.ACTION_PATH || path.resolve(__dirname, '..');
-const status         = (process.env.INPUT_STATUS    || 'failure').toLowerCase().trim();
-const jobName        = (process.env.INPUT_JOB_NAME  || '').trim();
-const customTitle    = (process.env.INPUT_TITLE     || '').trim();
-const customMessage  = (process.env.INPUT_MESSAGE   || '').trim();
-const debugMode      = process.env.INPUT_DEBUG === 'true';
-const channels       = (process.env.INPUT_CHANNELS  || 'slack')
+const ACTION_PATH = process.env.ACTION_PATH || path.resolve(__dirname, '..');
+const preset      = (process.env.INPUT_PRESET   || '').trim().toLowerCase();
+const inputTitle  = (process.env.INPUT_TITLE    || '').trim();
+const inputMsg    = (process.env.INPUT_MESSAGE  || '').trim();
+const debugMode   = process.env.INPUT_DEBUG === 'true';
+const channels    = (process.env.INPUT_CHANNELS || 'slack')
   .split(',')
   .map(c => c.trim().toLowerCase())
   .filter(Boolean);
 
-// ── GitHub context (always set on runners) ────────────────────────────────────
+// ── GitHub context (available on runners, usable in presets and templates) ────
 
 const repository = process.env.GITHUB_REPOSITORY  || '';
 const refName    = process.env.GITHUB_REF_NAME    || '';
@@ -33,47 +32,67 @@ const sha        = process.env.GITHUB_SHA         || '';
 const actor      = process.env.GITHUB_ACTOR       || '';
 const serverUrl  = process.env.GITHUB_SERVER_URL  || 'https://github.com';
 const runId      = process.env.GITHUB_RUN_ID      || '';
+const runUrl     = repository && runId
+  ? `${serverUrl}/${repository}/actions/runs/${runId}`
+  : '';
 
-// ── Status metadata ───────────────────────────────────────────────────────────
+// ── Load presets from presets/ directory ──────────────────────────────────────
+// Each .json file becomes a preset keyed by its filename (without extension).
+// To add a new preset, drop a JSON file with "title" and "message" fields into
+// the presets/ directory — no code changes required.
 
-const STATUS_META = {
-  success:   { emoji: '🟢', color: 'success' },
-  failure:   { emoji: '🔴', color: 'danger'  },
-  cancelled: { emoji: '⚪️', color: 'warning' },
+const presetsDir = path.join(ACTION_PATH, 'presets');
+const PRESETS    = {};
+
+if (fs.existsSync(presetsDir)) {
+  for (const file of fs.readdirSync(presetsDir).sort()) {
+    if (!file.endsWith('.json')) continue;
+    const name = path.basename(file, '.json');
+    try {
+      const def = JSON.parse(fs.readFileSync(path.join(presetsDir, file), 'utf8'));
+      PRESETS[name] = {
+        title  : def.title,
+        message: Array.isArray(def.message) ? def.message.join('\n') : def.message,
+      };
+    } catch (err) {
+      console.warn(`⚠  Could not load preset "${name}": ${err.message}`);
+    }
+  }
+}
+
+// ── Resolve title and message ─────────────────────────────────────────────────
+// Substitute GitHub context vars into a preset string.
+const CTX = {
+  '{REPOSITORY}' : repository,
+  '{BRANCH}'     : refName,
+  '{WORKFLOW}'   : workflow,
+  '{COMMIT}'     : sha,
+  '{AUTHOR}'     : actor,
+  '{RUN_URL}'    : runUrl,
 };
-const meta = STATUS_META[status] || { emoji: '🔵', color: 'info' };
+const resolveCtx = str => Object.entries(CTX).reduce((s, [k, v]) => s.split(k).join(v), str);
 
-// ── Build notification content ────────────────────────────────────────────────
+const presetDef = PRESETS[preset];
+const title     = inputTitle || (presetDef ? resolveCtx(presetDef.title)   : '');
+const message   = inputMsg   || (presetDef ? resolveCtx(presetDef.message) : '');
 
-const capitalize = s => s.charAt(0).toUpperCase() + s.slice(1);
-const runUrl     = `${serverUrl}/${repository}/actions/runs/${runId}`;
-const title      = customTitle || `${capitalize(status)} — ${jobName}`;
-
-const defaultMessage = [
-  `Repository : ${repository}`,
-  `Branch     : ${refName}`,
-  `Workflow   : ${workflow}`,
-  `Job        : ${jobName}`,
-  `Commit     : ${sha}`,
-  `Author     : ${actor}`,
-  '',
-  `View Run   : ${runUrl}`,
-].join('\n');
-
-const message = customMessage || defaultMessage;
+if (!title) {
+  console.error(`✗ Input "title" is missing — provide it directly or set a valid preset (${Object.keys(PRESETS).join(' | ')}).`);
+  process.exit(1);
+}
+if (!message) {
+  console.error(`✗ Input "message" is missing — provide it directly or set a valid preset (${Object.keys(PRESETS).join(' | ')}).`);
+  process.exit(1);
+}
 
 // ── Template variables ────────────────────────────────────────────────────────
 
 const VARS = {
-  '{EMOJI}'      : meta.emoji,
-  '{STATUS}'     : status,
-  '{COLOR}'      : meta.color,
   '{TITLE}'      : title,
   '{MESSAGE}'    : message,
   '{REPOSITORY}' : repository,
   '{BRANCH}'     : refName,
   '{WORKFLOW}'   : workflow,
-  '{JOB}'        : jobName,
   '{COMMIT}'     : sha,
   '{AUTHOR}'     : actor,
   '{RUN_URL}'    : runUrl,
@@ -109,8 +128,7 @@ function resolveBody(channel) {
 
   if (customTplPath && fs.existsSync(customTplPath)) {
     tplPath = customTplPath;
-  } else if (!customMessage && fs.existsSync(bundledTplPath)) {
-    // Only use the built-in template when no custom message was provided
+  } else if (fs.existsSync(bundledTplPath)) {
     tplPath = bundledTplPath;
   }
 
@@ -122,13 +140,11 @@ function resolveBody(channel) {
 }
 
 function sendNotification(channel, url, body) {
-  const fullTitle = `${meta.emoji} ${title}`;
-
   console.log(`\n→ [${channel}] Sending notification…`);
 
   const appriseArgs = debugMode
-    ? ['-vv', '-t', fullTitle, '-b', body, url]
-    : ['-v',  '-t', fullTitle, '-b', body, url];
+    ? ['-vv', '-t', title, '-b', body, url]
+    : ['-v',  '-t', title, '-b', body, url];
 
   const result = spawnSync('apprise', appriseArgs, {
     encoding : 'utf8',

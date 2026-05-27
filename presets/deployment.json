@@ -1,0 +1,11 @@
+{
+  "title": "Deployment: {REPOSITORY} → {BRANCH}",
+  "message": [
+    "Repository : {REPOSITORY}",
+    "Branch     : {BRANCH}",
+    "Commit     : {COMMIT}",
+    "Author     : {AUTHOR}",
+    "",
+    "View Run   : {RUN_URL}"
+  ]
+}

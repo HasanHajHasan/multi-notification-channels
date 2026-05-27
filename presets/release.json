@@ -1,0 +1,11 @@
+{
+  "title": "Release: {REPOSITORY} @ {BRANCH}",
+  "message": [
+    "Repository : {REPOSITORY}",
+    "Tag        : {BRANCH}",
+    "Commit     : {COMMIT}",
+    "Author     : {AUTHOR}",
+    "",
+    "View Release : {RUN_URL}"
+  ]
+}

@@ -8,26 +8,22 @@ branding:
 
 inputs:
   # ── General ────────────────────────────────────────────────────────────────
-  status:
-    description: 'Job status: success | failure | cancelled | or any custom string'
+  preset:
+    description: 'Name of a preset file from the presets/ directory (e.g. workflow, deployment, release). Generates title and message from GitHub context automatically.'
     required: false
-    default: 'failure'
-  job_name:
-    description: 'Name of the job that triggered the notification'
+    default: ''
+  title:
+    description: 'Notification title / header. Required when preset is not set; overrides the preset title when both are provided.'
     required: false
-    default: ${{ github.job }}
+    default: ''
+  message:
+    description: 'Notification body. Required when preset is not set; overrides the preset message when both are provided.'
+    required: false
+    default: ''
   channels:
     description: 'Comma-separated list of channels to notify: slack,discord,telegram,teams,gchat,email,sns,gotify,ntfy,webhook'
     required: false
     default: 'slack'
-  title:
-    description: 'Custom notification title (overrides auto-generated title)'
-    required: false
-    default: ''
-  message:
-    description: 'Custom message body — when set, built-in templates are skipped'
-    required: false
-    default: ''
   debug:
     description: 'Enable verbose Apprise output (true/false)'
     required: false
@@ -134,11 +130,10 @@ runs:
       run: node "${{ github.action_path }}/src/index.js"
       env:
         ACTION_PATH:              ${{ github.action_path }}
-        INPUT_STATUS:             ${{ inputs.status }}
-        INPUT_JOB_NAME:           ${{ inputs.job_name }}
-        INPUT_CHANNELS:           ${{ inputs.channels }}
+        INPUT_PRESET:             ${{ inputs.preset }}
         INPUT_TITLE:              ${{ inputs.title }}
         INPUT_MESSAGE:            ${{ inputs.message }}
+        INPUT_CHANNELS:           ${{ inputs.channels }}
         INPUT_DEBUG:              ${{ inputs.debug }}
         INPUT_SLACK_TEMPLATE:     ${{ inputs.slack_template }}
         INPUT_DISCORD_TEMPLATE:   ${{ inputs.discord_template }}

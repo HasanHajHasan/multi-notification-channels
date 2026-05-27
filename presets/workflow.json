@@ -1,0 +1,12 @@
+{
+  "title": "Workflow: {WORKFLOW} [{BRANCH}]",
+  "message": [
+    "Repository : {REPOSITORY}",
+    "Branch     : {BRANCH}",
+    "Workflow   : {WORKFLOW}",
+    "Commit     : {COMMIT}",
+    "Author     : {AUTHOR}",
+    "",
+    "View Run   : {RUN_URL}"
+  ]
+}
