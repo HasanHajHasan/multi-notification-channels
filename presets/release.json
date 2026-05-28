@@ -1,6 +1,7 @@
 {
-  "title": "Release: {REPOSITORY} @ {BRANCH}",
+  "title": "{EMOJI} Release: {REPOSITORY} @ {BRANCH}",
   "message": [
+    "Status     : {STATUS}",
     "Repository : {REPOSITORY}",
     "Tag        : {BRANCH}",
     "Commit     : {COMMIT}",

@@ -1,6 +1,7 @@
 {
-  "title": "Workflow: {WORKFLOW} [{BRANCH}]",
+  "title": "{EMOJI} Workflow: {WORKFLOW} [{BRANCH}]",
   "message": [
+    "Status     : {STATUS}",
     "Repository : {REPOSITORY}",
     "Branch     : {BRANCH}",
     "Workflow   : {WORKFLOW}",

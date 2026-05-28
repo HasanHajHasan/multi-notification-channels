@@ -15,6 +15,7 @@ const path          = require('path');
 
 const ACTION_PATH = process.env.ACTION_PATH || path.resolve(__dirname, '..');
 const preset      = (process.env.INPUT_PRESET   || '').trim().toLowerCase();
+const status      = (process.env.INPUT_STATUS   || '').trim().toLowerCase();
 const inputTitle  = (process.env.INPUT_TITLE    || '').trim();
 const inputMsg    = (process.env.INPUT_MESSAGE  || '').trim();
 const debugMode   = process.env.INPUT_DEBUG === 'true';
@@ -35,6 +36,16 @@ const runId      = process.env.GITHUB_RUN_ID      || '';
 const runUrl     = repository && runId
   ? `${serverUrl}/${repository}/actions/runs/${runId}`
   : '';
+
+// ── Status metadata ───────────────────────────────────────────────────────────
+
+const STATUS_META = {
+  success:   { emoji: '🟢' },
+  failure:   { emoji: '🔴' },
+  cancelled: { emoji: '⚪️' },
+};
+const statusEmoji = (STATUS_META[status] || { emoji: '🔵' }).emoji;
+const statusLabel = status ? status.charAt(0).toUpperCase() + status.slice(1) : '';
 
 // ── Load presets from presets/ directory ──────────────────────────────────────
 // Each .json file becomes a preset keyed by its filename (without extension).
@@ -63,6 +74,8 @@ if (fs.existsSync(presetsDir)) {
 // ── Resolve title and message ─────────────────────────────────────────────────
 // Substitute GitHub context vars into a preset string.
 const CTX = {
+  '{STATUS}'     : statusLabel,
+  '{EMOJI}'      : statusEmoji,
   '{REPOSITORY}' : repository,
   '{BRANCH}'     : refName,
   '{WORKFLOW}'   : workflow,
@@ -90,6 +103,8 @@ if (!message) {
 const VARS = {
   '{TITLE}'      : title,
   '{MESSAGE}'    : message,
+  '{STATUS}'     : statusLabel,
+  '{EMOJI}'      : statusEmoji,
   '{REPOSITORY}' : repository,
   '{BRANCH}'     : refName,
   '{WORKFLOW}'   : workflow,

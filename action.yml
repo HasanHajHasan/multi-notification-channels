@@ -12,6 +12,10 @@ inputs:
     description: 'Name of a preset file from the presets/ directory (e.g. workflow, deployment, release). Generates title and message from GitHub context automatically.'
     required: false
     default: ''
+  status:
+    description: 'Job status passed to presets and templates: success | failure | cancelled | any custom string. Populates {STATUS} and {EMOJI} variables.'
+    required: false
+    default: ''
   title:
     description: 'Notification title / header. Required when preset is not set; overrides the preset title when both are provided.'
     required: false
@@ -131,6 +135,7 @@ runs:
       env:
         ACTION_PATH:              ${{ github.action_path }}
         INPUT_PRESET:             ${{ inputs.preset }}
+        INPUT_STATUS:             ${{ inputs.status }}
         INPUT_TITLE:              ${{ inputs.title }}
         INPUT_MESSAGE:            ${{ inputs.message }}
         INPUT_CHANNELS:           ${{ inputs.channels }}
